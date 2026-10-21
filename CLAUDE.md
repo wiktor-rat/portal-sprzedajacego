@@ -60,3 +60,11 @@ Kierunek: spokojny, wiarygodny, „raport od profesjonalisty”. Głęboka ziele
 5. Portal właściciela pod `/o/<token>`
 6. Raport tygodniowy, informacja o otwarciach portalu
 7. Później: wersja dla wynajmu, zapraszanie agentów do biura, branding biura (logo, kolor), automatyczne wyniki kampanii Meta
+
+## Stan projektu (22.10.2026)
+Kroki 1–6 gotowe i wdrożone na https://portal-sprzedajacego.vercel.app (Supabase: schemat uruchomiony, zmienne w Vercel, Site URL ustawiony, potwierdzanie e-maila wyłączone na czas budowy).
+
+Struktura kodu (`src/`): `main.js` (logowanie + routing panelu po `#`), `auth.js`, `listings.js` (lista, formularz), `listing-detail.js` (szczegóły: prezentacje, działania, statystyki, link, raport), `report.js` (raport tygodniowy), `portal.js` + `portal.css` (portal właściciela), `domain.js` (słowniki, reguły), `format.js` (liczby i daty po polsku), `ui.js` (helpery DOM i formularzy).
+
+Przed pilotażem (Wiktor, w panelach): własny SMTP w Supabase + włączenie „Confirm email”, umowy powierzenia z biurami, opcjonalnie własna domena.
+Następny krok w kodzie (do ustalenia): najpewniej zapraszanie agentów do biura, potem branding biura, wynajem, wyniki kampanii Meta.

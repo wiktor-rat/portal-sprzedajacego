@@ -16,6 +16,12 @@ function brandMark() {
   return svg
 }
 
-export function topbar(label = 'Portal Sprzedającego') {
-  return h('header', { class: 'topbar' }, brandMark(), h('span', { class: 'brand' }, label))
+export function topbar(label = 'Portal Sprzedającego', ...actions) {
+  return h(
+    'header',
+    { class: 'topbar' },
+    brandMark(),
+    h('span', { class: 'brand' }, label),
+    actions.length ? h('div', { class: 'topbar-actions' }, ...actions) : null,
+  )
 }

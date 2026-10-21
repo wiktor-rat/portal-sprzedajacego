@@ -45,6 +45,10 @@ Jeśli zmienne dodasz albo zmienisz później: **Settings → Environment Variab
 
 Dzięki temu linki w e-mailach (potwierdzenie konta, reset hasła) prowadzą do aplikacji, a nie na `localhost`.
 
+### Logowanie: potwierdzanie e-maila
+
+Na czas budowy potwierdzanie e-maila jest wyłączone (**Authentication → Sign In / Providers → Email → Confirm email**: wyłączone), więc konto działa od razu po rejestracji. Przed pilotażem z biurami: włączyć je i podpiąć własny serwer pocztowy (**Authentication → Emails → SMTP Settings**). Wbudowana poczta Supabase wysyła tylko kilka maili na godzinę i tylko do członków zespołu projektu.
+
 ### 5. Sprawdzenie
 
 Otwórz adres z Vercel. W karcie „Stan aplikacji” powinna być zielona kropka i napis **„Połączenie z Supabase działa, schemat bazy jest zainstalowany.”**

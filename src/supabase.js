@@ -25,15 +25,3 @@ export async function getOwnerPortal(token, { track = true } = {}) {
   return data
 }
 
-// Sprawdza, czy schemat bazy (supabase/schema.sql) został uruchomiony.
-export async function checkDatabase() {
-  try {
-    await getOwnerPortal('0'.repeat(32), { track: false })
-    return { ok: true }
-  } catch (error) {
-    if (error.code === 'PGRST202') {
-      return { ok: false, message: 'Połączenie działa, ale w bazie brakuje funkcji portalu. Uruchom supabase/schema.sql w Supabase SQL Editor.' }
-    }
-    return { ok: false, message: `Nie udało się połączyć z Supabase: ${error.message}` }
-  }
-}

@@ -416,3 +416,17 @@ fieldset.choice legend { font-weight: 500; font-size: 0.95rem; padding: 0; margi
 .stats-list li { padding: 10px 0; border-bottom: 1px solid var(--border); display: grid; gap: 2px; }
 .stats-list li:last-child { border-bottom: 0; }
 .stats-week { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+/* Link dla właściciela */
+.owner-link {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.link-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.link-actions .btn-ghost { min-height: 46px; padding: 10px 14px; }

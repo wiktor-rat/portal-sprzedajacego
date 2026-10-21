@@ -1,0 +1,153 @@
+/* Portal właściciela — układ wzorowany na prototypie: jedna kolumna na telefonie, dwie na komputerze */
+
+.portal { max-width: 1080px; gap: 20px; }
+
+.portal h2 { font-size: 1.05rem; }
+
+.preview-banner {
+  background: var(--brass-soft);
+  border: 1px dashed var(--brass);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+
+/* Nagłówek */
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.hero-main { display: grid; gap: 4px; min-width: 0; }
+.hero h1 { font-size: clamp(1.5rem, 4.4vw, 2.25rem); line-height: 1.1; overflow-wrap: anywhere; }
+.hero-side { display: grid; gap: 2px; }
+.hero-price { font-size: 1.6rem; font-weight: 500; line-height: 1.2; }
+
+.owner-status {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.owner-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: block; }
+.owner-status.status-reserved { color: var(--brass); background: var(--brass-soft); }
+.owner-status.status-withdrawn { color: var(--text-muted); background: var(--surface-2); }
+
+.exclusivity { margin-top: 8px; display: grid; gap: 4px; }
+.track { height: 5px; background: var(--border); border-radius: 5px; overflow: hidden; width: 220px; max-width: 100%; }
+.track span { display: block; height: 100%; background: var(--brass); }
+
+@media (min-width: 640px) {
+  .hero-side { text-align: right; justify-items: end; }
+}
+
+/* Liczby */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+@media (min-width: 720px) {
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.kpi { background: var(--surface); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+.kpi-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+.kpi-value { font-size: 1.75rem; font-weight: 500; line-height: 1.2; }
+.kpi-note { font-size: 0.78rem; color: var(--ok); font-weight: 600; }
+
+/* Siatka */
+.portal-grid { display: grid; gap: 20px; align-items: start; }
+.portal-col { display: grid; gap: 20px; min-width: 0; }
+@media (min-width: 860px) {
+  .portal-grid { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+}
+
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; }
+
+/* Wykres */
+.legend { display: flex; gap: 14px; font-size: 0.8rem; color: var(--text-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: block; }
+.swatch-portal { background: var(--accent); }
+.swatch-campaign { background: var(--brass); }
+
+.chart-box { overflow-x: auto; }
+.chart { display: block; width: 100%; min-width: 320px; height: auto; }
+.chart text { fill: var(--text-muted); font-family: var(--font-mono); font-size: 10px; }
+.chart .bar-value { fill: var(--text); font-weight: 500; }
+.chart .grid-line { stroke: var(--border); stroke-width: 1; }
+.chart .bar-portal { fill: var(--accent); }
+.chart .bar-campaign { fill: var(--brass); }
+
+/* Kampania */
+.campaign { background: var(--brass-soft); border-color: transparent; }
+.campaign-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.campaign-stats div { display: grid; }
+.campaign-stats .mono { font-size: 1.25rem; font-weight: 500; }
+.campaign-stats small { font-size: 0.78rem; color: var(--text-muted); line-height: 1.3; }
+
+/* Oś czasu */
+.owner-timeline { list-style: none; margin: 0; padding: 0; display: grid; }
+.owner-timeline li { display: grid; grid-template-columns: 52px 14px minmax(0, 1fr); gap: 10px; padding-bottom: 16px; }
+.owner-timeline li:last-child { padding-bottom: 0; }
+.owner-timeline .when { font-size: 0.78rem; color: var(--text-muted); padding-top: 2px; }
+.owner-timeline .dot { position: relative; }
+.owner-timeline .dot::before { content: ''; position: absolute; left: 3px; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.owner-timeline .dot::after { content: ''; position: absolute; left: 6.5px; top: 17px; bottom: -16px; width: 1px; background: var(--border); }
+.owner-timeline li:last-child .dot::after { display: none; }
+.owner-timeline li.k-presentation .dot::before { background: var(--brass); }
+.owner-timeline .what { font-weight: 600; }
+
+/* Agent */
+.agent { display: flex; gap: 14px; align-items: center; }
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+  font: 600 1.05rem var(--font-heading);
+  flex: none;
+}
+.agent-name { font-weight: 600; }
+.agent-contact { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.agent-contact .mono { font-size: 1rem; user-select: all; }
+
+/* Opinie */
+.price-summary { display: grid; gap: 6px; }
+.price-bar { display: flex; gap: 3px; height: 8px; border-radius: 4px; overflow: hidden; }
+.price-bar span { display: block; height: 100%; }
+.pb-fair { background: var(--ok); }
+.pb-too_high { background: var(--warn); }
+.pb-bargain { background: var(--accent); }
+
+.feedback-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.feedback-list li { display: grid; gap: 6px; padding: 12px 0; border-top: 1px solid var(--border); }
+.feedback-list li:first-child { border-top: 0; padding-top: 4px; }
+.fb-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pill { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.pill-interest-high { color: var(--ok); }
+.pill-interest-medium { color: var(--brass); }
+.pill-interest-low { color: var(--text-muted); }
+.pill-price-too_high { color: var(--warn); }
+.pill-price-fair { color: var(--ok); }
+.pill-price-bargain { color: var(--accent); }
+
+.portal-foot { font-size: 0.8rem; color: var(--text-muted); text-align: center; }

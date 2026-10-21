@@ -73,3 +73,15 @@ export function choice(label, { name, options, value, required = false, hint }) 
     hint ? h('p', { class: 'hint' }, hint) : null,
   )
 }
+
+// Kopiowanie do schowka z potwierdzeniem na przycisku. Gdy przeglądarka odmówi — prośba o ręczne skopiowanie.
+export async function copyText(text, button) {
+  const original = button.textContent
+  try {
+    await navigator.clipboard.writeText(text)
+    button.textContent = 'Skopiowano ✓'
+  } catch {
+    button.textContent = 'Zaznacz i skopiuj ręcznie'
+  }
+  setTimeout(() => (button.textContent = original), 1800)
+}

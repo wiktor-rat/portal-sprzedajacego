@@ -1,22 +1,7 @@
 import { supabase } from './supabase.js'
-import { dayWord, daysUntil, dbErrorText, invalid, number, pricePLN } from './format.js'
+import { dbErrorText, invalid, number, pricePLN } from './format.js'
+import { STATUS_LABELS, exclusivityInfo } from './domain.js'
 import { field, form, h } from './ui.js'
-
-export const STATUS_LABELS = {
-  active: 'Aktywna',
-  reserved: 'Zarezerwowana',
-  sold: 'Sprzedana',
-  withdrawn: 'Wycofana',
-}
-
-// Stan umowy na wyłączność do pokazania przy ofercie: [tekst, rodzaj] lub null.
-export function exclusivityInfo(listing) {
-  if (!listing.exclusive_to) return ['Brak daty końca umowy', 'muted']
-  const left = daysUntil(listing.exclusive_to)
-  if (left < 0) return [`Wyłączność wygasła ${-left} ${dayWord(left)} temu`, 'danger']
-  if (left === 0) return ['Wyłączność kończy się dziś', 'warn']
-  return [`Wyłączność: jeszcze ${left} ${dayWord(left)}`, left <= 14 ? 'warn' : 'ok']
-}
 
 // „650 000”, „650000,50”, „650.000” → liczba; puste → null; bzdura → NaN
 function parseAmount(text) {

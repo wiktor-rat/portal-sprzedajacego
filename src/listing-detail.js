@@ -1,18 +1,7 @@
 import { supabase } from './supabase.js'
-import { STATUS_LABELS, exclusivityInfo } from './listings.js'
+import { ACTION_LABELS, INTEREST_LABELS, PRICE_LABELS, STATUS_LABELS, exclusivityInfo } from './domain.js'
 import { addDays, dbErrorText, invalid, longDate, mondayOf, number, plural, pricePLN, shortDate, todayISO, weekLabel } from './format.js'
-import { choice, field, form, h } from './ui.js'
-
-export const INTEREST_LABELS = { low: 'Niskie', medium: 'Średnie', high: 'Wysokie' }
-export const PRICE_LABELS = { too_high: 'Za wysoka', fair: 'Adekwatna', bargain: 'Okazja' }
-export const ACTION_LABELS = {
-  bump: 'Podbicie ogłoszenia',
-  open_day: 'Dzień otwarty',
-  new_photos: 'Nowe zdjęcia',
-  buyer_mailing: 'Wysyłka do bazy kupujących',
-  price_talk: 'Rozmowa o cenie',
-  other: 'Inne działanie',
-}
+import { choice, copyText, field, form, h } from './ui.js'
 
 const STAT_FIELDS = [
   ['views', 'Wyświetlenia ogłoszeń'],
@@ -35,7 +24,7 @@ export async function listingDetailView(id) {
 
   async function load() {
     const [listing, events, stats] = await Promise.all([
-      supabase.from('listings').select('id, title, address, price, area_m2, status, exclusive_from, exclusive_to, next_step').eq('id', id).maybeSingle(),
+      supabase.from('listings').select('id, title, address, price, area_m2, status, exclusive_from, exclusive_to, next_step, owner_token').eq('id', id).maybeSingle(),
       supabase
         .from('listing_events')
         .select('id, kind, action_type, event_date, title, note, interest, price_feedback, buyer_label')
@@ -77,6 +66,7 @@ export async function listingDetailView(id) {
     return [
       h('a', { class: 'back-link', href: '#/' }, '← Oferty'),
       headerCard(listing),
+      ownerLinkCard(listing),
       summary(stats, presentations),
       h(
         'div',
@@ -128,6 +118,26 @@ function headerCard(listing) {
       h('p', {}, listing.next_step || 'Nie ustawiono. Właściciel lubi wiedzieć, co dalej.'),
     ),
     h('a', { class: 'btn btn-ghost', href: `#/oferty/${listing.id}/edycja` }, 'Edytuj ofertę i następny krok'),
+  )
+}
+
+function ownerLinkCard(listing) {
+  const url = `${location.origin}/o/${listing.owner_token}`
+  const sms = `Dzień dobry, pod tym linkiem na bieżąco widzi Pan/Pani, co robimy z ofertą „${listing.title}”: ${url}`
+  return h(
+    'section',
+    { class: 'card' },
+    h('h2', {}, 'Link dla właściciela'),
+    h('p', { class: 'small muted' }, 'Bez logowania, tylko dla tej oferty. Nie udostępniaj go nikomu poza właścicielem.'),
+    h('code', { class: 'owner-link' }, url),
+    h(
+      'div',
+      { class: 'link-actions' },
+      h('button', { type: 'button', class: 'btn btn-primary', onClick: (e) => copyText(url, e.currentTarget) }, 'Kopiuj link'),
+      // „sms:?&body=” działa zarówno na iPhonie, jak i na Androidzie
+      h('a', { class: 'btn btn-ghost', href: `sms:?&body=${encodeURIComponent(sms)}` }, 'Wyślij SMS-em'),
+      h('a', { class: 'btn btn-ghost', href: `/o/${listing.owner_token}?podglad=1`, target: '_blank', rel: 'noopener' }, 'Podgląd raportu'),
+    ),
   )
 }
 

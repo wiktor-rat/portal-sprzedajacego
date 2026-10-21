@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js'
 import { dbErrorText, invalid, number, pricePLN } from './format.js'
-import { STATUS_LABELS, exclusivityInfo } from './domain.js'
+import { STATUS_LABELS, exclusivityInfo, ownerOpensInfo } from './domain.js'
 import { field, form, h } from './ui.js'
 
 // „650 000”, „650000,50”, „650.000” → liczba; puste → null; bzdura → NaN
@@ -26,8 +26,11 @@ function listingErrorText(error) {
 export async function listingsListView() {
   const { data, error } = await supabase
     .from('listings')
-    .select('id, title, address, price, area_m2, status, exclusive_to, created_at')
+    .select('id, title, address, price, area_m2, status, exclusive_to, created_at, portal_opens(opened_at)')
     .order('created_at', { ascending: false })
+    // z otwarć portalu potrzebujemy tylko ostatniego
+    .order('opened_at', { referencedTable: 'portal_opens', ascending: false })
+    .limit(1, { referencedTable: 'portal_opens' })
 
   const addButton = h('a', { class: 'btn btn-primary', href: '#/oferty/nowa' }, '+ Dodaj ofertę')
 
@@ -59,6 +62,7 @@ export async function listingsListView() {
 
 function listingItem(listing) {
   const [exclusivityText, exclusivityKind] = exclusivityInfo(listing)
+  const [opensText, opensTone] = ownerOpensInfo(listing.portal_opens?.[0]?.opened_at)
   const finished = listing.status === 'sold' || listing.status === 'withdrawn'
   const facts = [
     listing.price != null ? pricePLN.format(listing.price) : null,
@@ -75,6 +79,7 @@ function listingItem(listing) {
       listing.address ? h('p', { class: 'muted' }, listing.address) : null,
       facts.length ? h('p', { class: 'mono' }, facts.join(' · ')) : null,
       finished ? null : h('p', { class: `small tone-${exclusivityKind}` }, exclusivityText),
+      finished ? null : h('p', { class: `small tone-${opensTone === 'warn' ? 'warn' : 'muted'}` }, opensText),
     ),
   )
 }

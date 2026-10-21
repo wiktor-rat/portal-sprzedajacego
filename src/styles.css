@@ -430,3 +430,19 @@ fieldset.choice legend { font-weight: 500; font-size: 0.95rem; padding: 0; margi
 }
 .link-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .link-actions .btn-ghost { min-height: 46px; padding: 10px 14px; }
+
+.owner-opens { font-weight: 600; }
+
+.report-text {
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+}
+.report-text:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }

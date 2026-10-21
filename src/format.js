@@ -76,3 +76,10 @@ export function dbErrorText(error) {
   if (error?.code === '23514') return 'Sprawdź wpisane dane: któraś wartość jest poza dozwolonym zakresem.'
   return 'Nie udało się zapisać. Spróbuj ponownie.'
 }
+
+// Ile pełnych dni kalendarzowych (w strefie użytkownika) minęło od chwili zapisanej w bazie (timestamptz)
+export function daysAgo(timestamp) {
+  const then = new Date(timestamp)
+  const thenDay = Date.UTC(then.getFullYear(), then.getMonth(), then.getDate())
+  return Math.round((utc(todayISO()) - thenDay) / DAY)
+}

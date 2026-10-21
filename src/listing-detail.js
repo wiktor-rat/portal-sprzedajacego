@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js'
-import { ACTION_LABELS, INTEREST_LABELS, PRICE_LABELS, STATUS_LABELS, exclusivityInfo } from './domain.js'
-import { addDays, dbErrorText, invalid, longDate, mondayOf, number, plural, pricePLN, shortDate, todayISO, weekLabel } from './format.js'
+import { ACTION_LABELS, INTEREST_LABELS, PRICE_LABELS, STATUS_LABELS, exclusivityInfo, ownerOpensInfo } from './domain.js'
+import { reportCard } from './report.js'
+import { addDays, daysAgo, dbErrorText, invalid, longDate, mondayOf, number, plural, pricePLN, shortDate, todayISO, weekLabel } from './format.js'
 import { choice, copyText, field, form, h } from './ui.js'
 
 const STAT_FIELDS = [
@@ -19,12 +20,12 @@ const sum = (rows, key) => rows.reduce((total, row) => total + (row[key] ?? 0), 
 // Szczegóły oferty. Widok sam się odświeża po zapisie, bez przewijania strony na górę.
 export async function listingDetailView(id) {
   const root = h('div', { class: 'detail' })
-  const state = { openPanel: null, statsWeek: null }
+  const state = { openPanel: null, statsWeek: null, reportWeek: null }
   let current = null
 
   async function load() {
-    const [listing, events, stats] = await Promise.all([
-      supabase.from('listings').select('id, title, address, price, area_m2, status, exclusive_from, exclusive_to, next_step, owner_token').eq('id', id).maybeSingle(),
+    const [listing, events, stats, opens] = await Promise.all([
+      supabase.from('listings').select('id, title, address, price, area_m2, status, exclusive_from, exclusive_to, next_step, owner_token, agent:profiles(full_name, phone)').eq('id', id).maybeSingle(),
       supabase
         .from('listing_events')
         .select('id, kind, action_type, event_date, title, note, interest, price_feedback, buyer_label')
@@ -32,9 +33,10 @@ export async function listingDetailView(id) {
         .order('event_date', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase.from('listing_stats').select('*').eq('listing_id', id).order('period_start', { ascending: false }),
+      supabase.from('portal_opens').select('opened_at').eq('listing_id', id).order('opened_at', { ascending: false }).limit(100),
     ])
 
-    const failed = [listing, events, stats].find((r) => r.error)
+    const failed = [listing, events, stats, opens].find((r) => r.error)
     if (failed || !listing.data) {
       if (failed) console.error(failed.error)
       root.replaceChildren(
@@ -44,7 +46,7 @@ export async function listingDetailView(id) {
       return
     }
 
-    current = { listing: listing.data, events: events.data, stats: stats.data }
+    current = { listing: listing.data, events: events.data, stats: stats.data, opens: opens.data }
     root.replaceChildren(...render(current))
   }
 
@@ -61,12 +63,13 @@ export async function listingDetailView(id) {
     await load()
   }
 
-  function render({ listing, events, stats }) {
+  function render({ listing, events, stats, opens }) {
     const presentations = events.filter((e) => e.kind === 'presentation')
+    const ownerUrl = `${location.origin}/o/${listing.owner_token}`
     return [
       h('a', { class: 'back-link', href: '#/' }, '← Oferty'),
       headerCard(listing),
-      ownerLinkCard(listing),
+      ownerLinkCard(listing, ownerUrl, opens),
       summary(stats, presentations),
       h(
         'div',
@@ -79,6 +82,17 @@ export async function listingDetailView(id) {
       state.openPanel === 'action' ? actionForm(id, saved, () => toggle(null)) : null,
       state.openPanel === 'stats' ? statsForm(id, stats, state.statsWeek, saved, () => toggle(null)) : null,
       timeline(events, load),
+      reportCard({
+        listing,
+        events,
+        stats,
+        url: ownerUrl,
+        state,
+        onWeekChange: (week) => {
+          state.reportWeek = week
+          root.replaceChildren(...render(current))
+        },
+      }),
       statsHistory(stats, (week) => toggle('stats', { statsWeek: week, force: true })),
     ].filter(Boolean)
   }
@@ -121,13 +135,21 @@ function headerCard(listing) {
   )
 }
 
-function ownerLinkCard(listing) {
-  const url = `${location.origin}/o/${listing.owner_token}`
+function ownerLinkCard(listing, url, opens) {
+  const [opensText, opensTone] = ownerOpensInfo(opens[0]?.opened_at)
+  const lastWeek = opens.filter((o) => daysAgo(o.opened_at) < 7).length
   const sms = `Dzień dobry, pod tym linkiem na bieżąco widzi Pan/Pani, co robimy z ofertą „${listing.title}”: ${url}`
   return h(
     'section',
     { class: 'card' },
     h('h2', {}, 'Link dla właściciela'),
+    h(
+      'p',
+      { class: `owner-opens tone-${opensTone}` },
+      opensText,
+      lastWeek > 1 ? h('span', { class: 'muted' }, ` · ${lastWeek} ${plural(lastWeek, 'otwarcie', 'otwarcia', 'otwarć')} w ostatnich 7 dniach`) : null,
+    ),
+    opensTone === 'warn' ? h('p', { class: 'small muted' }, 'Wyślij właścicielowi link albo raport tygodniowy (poniżej), żeby widział, co dzieje się z ofertą.') : null,
     h('p', { class: 'small muted' }, 'Bez logowania, tylko dla tej oferty. Nie udostępniaj go nikomu poza właścicielem.'),
     h('code', { class: 'owner-link' }, url),
     h(

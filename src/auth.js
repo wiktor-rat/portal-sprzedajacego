@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js'
-import { h } from './ui.js'
+import { field, form as baseForm, h } from './ui.js'
 
 const MIN_PASSWORD = 8
 
@@ -23,39 +23,8 @@ export function authErrorMessage(error) {
   return 'Coś poszło nie tak. Spróbuj ponownie.'
 }
 
-function field(label, attrs) {
-  const id = `f-${attrs.name}`
-  return h('div', { class: 'field' }, h('label', { for: id }, label), h('input', { id, ...attrs }))
-}
-
-function feedback() {
-  return h('p', { class: 'feedback', role: 'status', 'aria-live': 'polite' })
-}
-
-function setFeedback(el, kind, text) {
-  el.dataset.kind = kind
-  el.textContent = text
-}
-
-// Wspólna obsługa formularza: blokada przycisku na czas wysyłki i komunikat błędu.
 function form(submitLabel, fields, onSubmit) {
-  const msg = feedback()
-  const button = h('button', { type: 'submit', class: 'btn btn-primary' }, submitLabel)
-  const el = h('form', { class: 'form' }, ...fields, msg, button)
-  el.addEventListener('submit', async (event) => {
-    event.preventDefault()
-    const data = Object.fromEntries(new FormData(el))
-    button.disabled = true
-    setFeedback(msg, '', '')
-    try {
-      await onSubmit(data, (kind, text) => setFeedback(msg, kind, text))
-    } catch (error) {
-      setFeedback(msg, 'error', authErrorMessage(error))
-    } finally {
-      button.disabled = false
-    }
-  })
-  return el
+  return baseForm({ submitLabel, fields, onSubmit, errorText: authErrorMessage })
 }
 
 function linkButton(label, onClick) {

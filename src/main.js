@@ -3,6 +3,7 @@ import { configError, supabase } from './supabase.js'
 import { h, mount } from './ui.js'
 import { topbar } from './brand.js'
 import { loginView, newPasswordView, registerView, resetView } from './auth.js'
+import { listingFormView, listingsListView } from './listings.js'
 
 const app = document.querySelector('#app')
 const RECOVERY_PARAM = 'nowe-haslo'
@@ -28,20 +29,46 @@ function finishRecovery() {
 }
 
 async function signOut() {
+  profileCache = null
   await supabase.auth.signOut()
+  history.replaceState(null, '', '/')
 }
 
-async function showPanel(session) {
-  const logout = h('button', { type: 'button', class: 'btn btn-ghost', onClick: signOut }, 'Wyloguj')
-  page(topbar('Portal Sprzedającego', logout), h('p', { class: 'status', 'data-state': 'pending' }, 'Wczytuję…'))
+// Profil (imię, rola, biuro) wczytujemy raz na sesję, nie przy każdej zmianie widoku.
+let profileCache = null
 
-  const { data: profile, error } = await supabase
+async function loadProfile(session) {
+  if (profileCache?.userId === session.user.id) return profileCache.profile
+  const { data, error } = await supabase
     .from('profiles')
     .select('full_name, role, offices(name)')
     .eq('id', session.user.id)
     .single()
+  if (error) throw error
+  profileCache = { userId: session.user.id, profile: data }
+  return data
+}
 
-  if (error) {
+// Widoki panelu (adres po #): #/ lista ofert, #/oferty/nowa, #/oferty/<id>
+function panelRoute() {
+  const path = location.hash.replace(/^#/, '') || '/'
+  if (path === '/oferty/nowa') return () => listingFormView(null)
+  const match = path.match(/^\/oferty\/([0-9a-f-]{36})$/)
+  if (match) return () => listingFormView(match[1])
+  return null
+}
+
+let renderToken = 0
+
+async function showPanel(session) {
+  const token = ++renderToken
+  const logout = h('button', { type: 'button', class: 'btn btn-ghost', onClick: signOut }, 'Wyloguj')
+
+  let profile
+  try {
+    profile = await loadProfile(session)
+  } catch (error) {
+    console.error(error)
     page(
       topbar('Portal Sprzedającego', logout),
       h('section', { class: 'card' }, h('h1', {}, 'Nie udało się wczytać konta'), h('p', { class: 'muted' }, 'Odśwież stronę. Jeśli problem się powtarza, wyloguj się i zaloguj ponownie.')),
@@ -49,23 +76,23 @@ async function showPanel(session) {
     return
   }
 
-  const firstName = profile.full_name.split(' ')[0]
-  page(
-    topbar(profile.offices?.name || 'Portal Sprzedającego', logout),
-    h(
-      'div',
-      {},
-      h('p', { class: 'eyebrow' }, profile.role === 'owner' ? 'Właściciel biura' : 'Agent'),
-      h('h1', {}, firstName ? `Dzień dobry, ${firstName}` : 'Dzień dobry'),
-    ),
-    h(
-      'section',
-      { class: 'card' },
-      h('h2', {}, 'Twoje oferty'),
-      h('p', { class: 'muted' }, 'Lista ofert i dodawanie nowych pojawią się w kolejnym kroku.'),
-    ),
-    h('p', { class: 'muted small' }, `Zalogowano jako ${session.user.email}`),
-  )
+  const header = topbar(profile.offices?.name || 'Portal Sprzedającego', logout)
+  const route = panelRoute()
+  let content
+  if (route) {
+    content = await route()
+  } else {
+    const firstName = profile.full_name.split(' ')[0]
+    content = [
+      h('div', {}, h('p', { class: 'eyebrow' }, profile.role === 'owner' ? 'Właściciel biura' : 'Agent'), h('h1', {}, firstName ? `Dzień dobry, ${firstName}` : 'Dzień dobry')),
+      ...(await listingsListView()),
+      h('p', { class: 'muted small' }, `Zalogowano jako ${session.user.email}`),
+    ]
+  }
+  // Użytkownik mógł w międzyczasie przejść gdzie indziej — pokazujemy tylko najnowszy widok.
+  if (token !== renderToken) return
+  page(header, ...content)
+  window.scrollTo(0, 0)
 }
 
 let currentSession = null
@@ -92,6 +119,10 @@ function start() {
       // Zapytania do Supabase poza callbackiem (zalecenie supabase-js).
       setTimeout(render, 0)
     }
+  })
+
+  window.addEventListener('hashchange', () => {
+    if (currentSession && !recovering) render()
   })
 }
 

@@ -210,7 +210,9 @@ a { color: var(--accent); }
 
 .field label { font-weight: 500; font-size: 0.95rem; }
 
-.field input {
+.field input,
+.field select,
+.field textarea {
   font: inherit;
   font-size: 16px; /* 16px = brak automatycznego powiększania na iPhonie */
   width: 100%;
@@ -221,13 +223,21 @@ a { color: var(--accent); }
   color: var(--text);
 }
 
-.field input:focus {
+.field textarea { resize: vertical; min-height: 84px; }
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
   border-color: transparent;
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   font: inherit;
   font-weight: 600;
   border-radius: 10px;
@@ -266,3 +276,48 @@ a { color: var(--accent); }
 .feedback:empty { display: none; }
 .feedback[data-kind='error'] { color: var(--danger); }
 .feedback[data-kind='success'] { color: var(--ok); }
+
+.hint { font-size: 0.85rem; color: var(--text-muted); }
+
+/* Dwa pola obok siebie na szerszym ekranie, jedno pod drugim na telefonie */
+.field-row { display: grid; gap: 14px; }
+@media (min-width: 480px) {
+  .field-row { grid-template-columns: 1fr 1fr; }
+}
+
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.form-actions .btn-ghost { min-height: 46px; padding: 12px 18px; }
+
+.back-link { color: var(--text-muted); text-decoration: none; font-weight: 500; justify-self: start; padding: 4px 0; }
+.back-link:hover { color: var(--text); }
+
+/* Lista ofert */
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+
+.listing-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.listing-item { color: inherit; text-decoration: none; gap: 6px; transition: border-color 0.15s; }
+.listing-item:hover { border-color: var(--accent); }
+.listing-item h3 { font-family: var(--font-heading); font-size: 1.05rem; margin: 0; }
+
+.listing-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+
+.badge {
+  flex: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.badge-active { background: var(--accent-soft); color: var(--accent); }
+.badge-reserved { background: var(--brass-soft); color: var(--brass); }
+
+.tone-ok { color: var(--ok); }
+.tone-warn { color: var(--warn); }
+.tone-danger { color: var(--danger); }
+.tone-muted { color: var(--text-muted); }
+
+.empty { text-align: center; padding-block: 28px; }
+.empty h3 { font-family: var(--font-heading); margin: 0; }

@@ -51,13 +51,13 @@ Na czas budowy potwierdzanie e-maila jest wyłączone (**Authentication → Sign
 
 ### 5. Sprawdzenie
 
-Otwórz adres z Vercel. W karcie „Stan aplikacji” powinna być zielona kropka i napis **„Połączenie z Supabase działa, schemat bazy jest zainstalowany.”**
+Otwórz adres z Vercel. Powinien pojawić się ekran **„Zaloguj się”**. Kliknij **„Załóż konto biura”**, wypełnij formularz, a po rejestracji zobaczysz powitanie z nazwą biura.
 
 | Komunikat | Co zrobić |
 | --- | --- |
-| Brak zmiennych `VITE_SUPABASE_URL`… | Dodaj zmienne w Vercel i zrób Redeploy (krok 3) |
-| W bazie brakuje funkcji portalu | Uruchom `schema.sql` w SQL Editor (krok 1) |
-| Nie udało się połączyć… Invalid API key | Sprawdź, czy wkleiłeś cały klucz `sb_publishable_...` |
+| „Brak konfiguracji” / brak zmiennych `VITE_SUPABASE_URL`… | Dodaj zmienne w Vercel i zrób Redeploy (krok 3) |
+| „Nie udało się wczytać konta” po rejestracji | Uruchom `schema.sql` w SQL Editor (krok 1) |
+| „Coś poszło nie tak” przy logowaniu | Sprawdź, czy klucz `sb_publishable_...` w Vercel jest wklejony w całości |
 
 Adres `https://<twoja-domena>/o/test` powinien pokazać „Link jest nieaktywny”. To znaczy, że przekierowanie portalu właściciela działa.
 

@@ -56,3 +56,20 @@ export function form({ submitLabel, fields, onSubmit, errorText, extraActions = 
   })
   return el
 }
+
+// Wybór jednej opcji jako duże „pigułki” (wygodne na telefonie). options = [[wartość, etykieta], ...]
+export function choice(label, { name, options, value, required = false, hint }) {
+  return h(
+    'fieldset',
+    { class: 'field choice' },
+    h('legend', {}, label),
+    h(
+      'div',
+      { class: 'choice-options' },
+      options.map(([v, text]) =>
+        h('label', { class: 'choice-option' }, h('input', { type: 'radio', name, value: v, checked: v === value, required }), h('span', {}, text)),
+      ),
+    ),
+    hint ? h('p', { class: 'hint' }, hint) : null,
+  )
+}

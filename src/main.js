@@ -4,6 +4,7 @@ import { h, mount } from './ui.js'
 import { topbar } from './brand.js'
 import { loginView, newPasswordView, registerView, resetView } from './auth.js'
 import { listingFormView, listingsListView } from './listings.js'
+import { listingDetailView } from './listing-detail.js'
 
 const app = document.querySelector('#app')
 const RECOVERY_PARAM = 'nowe-haslo'
@@ -49,12 +50,12 @@ async function loadProfile(session) {
   return data
 }
 
-// Widoki panelu (adres po #): #/ lista ofert, #/oferty/nowa, #/oferty/<id>
+// Widoki panelu (adres po #): #/ lista ofert, #/oferty/nowa, #/oferty/<id>, #/oferty/<id>/edycja
 function panelRoute() {
   const path = location.hash.replace(/^#/, '') || '/'
   if (path === '/oferty/nowa') return () => listingFormView(null)
-  const match = path.match(/^\/oferty\/([0-9a-f-]{36})$/)
-  if (match) return () => listingFormView(match[1])
+  const match = path.match(/^\/oferty\/([0-9a-f-]{36})(\/edycja)?$/)
+  if (match) return match[2] ? () => listingFormView(match[1]) : () => listingDetailView(match[1])
   return null
 }
 

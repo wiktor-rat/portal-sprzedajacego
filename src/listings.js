@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { dayWord, daysUntil, dbErrorText, invalid, number, pricePLN } from './format.js'
 import { field, form, h } from './ui.js'
 
 export const STATUS_LABELS = {
@@ -6,26 +7,6 @@ export const STATUS_LABELS = {
   reserved: 'Zarezerwowana',
   sold: 'Sprzedana',
   withdrawn: 'Wycofana',
-}
-
-const DAY = 24 * 60 * 60 * 1000
-
-const pricePLN = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', maximumFractionDigits: 0 })
-const number = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 })
-
-function today() {
-  const d = new Date()
-  return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
-}
-
-// Daty z bazy przychodzą jako 'RRRR-MM-DD'; liczymy w UTC, żeby zmiana czasu nie przesuwała dni.
-function daysUntil(isoDate) {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  return Math.round((Date.UTC(y, m - 1, d) - today()) / DAY)
-}
-
-function dayWord(n) {
-  return Math.abs(n) === 1 ? 'dzień' : 'dni'
 }
 
 // Stan umowy na wyłączność do pokazania przy ofercie: [tekst, rodzaj] lub null.
@@ -50,14 +31,9 @@ function amountForInput(value) {
   return value == null ? '' : String(value).replace('.', ',')
 }
 
-function dbErrorText(error) {
-  if (/fetch|network/i.test(error?.message ?? '')) return 'Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.'
+function listingErrorText(error) {
   if (error?.code === '23514') return 'Sprawdź dane: data końca umowy nie może być przed datą początku, a cena i metraż muszą być dodatnie.'
-  return error?.userMessage ?? 'Nie udało się zapisać. Spróbuj ponownie.'
-}
-
-function invalid(message) {
-  return Object.assign(new Error(message), { userMessage: message })
+  return dbErrorText(error)
 }
 
 // ---------- Lista ofert ----------
@@ -165,10 +141,11 @@ export async function listingFormView(id) {
     }),
   ].filter(Boolean)
 
-  const cancel = h('a', { class: 'btn btn-ghost', href: '#/' }, 'Anuluj')
+  const backHref = id ? `#/oferty/${id}` : '#/'
+  const cancel = h('a', { class: 'btn btn-ghost', href: backHref }, 'Anuluj')
 
   return [
-    h('a', { class: 'back-link', href: '#/' }, '← Oferty'),
+    h('a', { class: 'back-link', href: backHref }, id ? '← Wróć do oferty' : '← Oferty'),
     h(
       'section',
       { class: 'card' },
@@ -177,7 +154,7 @@ export async function listingFormView(id) {
         submitLabel: id ? 'Zapisz zmiany' : 'Dodaj ofertę',
         fields,
         extraActions: [cancel],
-        errorText: dbErrorText,
+        errorText: listingErrorText,
         onSubmit: async (values) => {
           const price = parseAmount(values.price)
           const area = parseAmount(values.area_m2)
@@ -200,9 +177,15 @@ export async function listingFormView(id) {
           if (!row.title) throw invalid('Wpisz tytuł oferty.')
 
           // office_id i agent_id uzupełnia baza (domyślnie: biuro i konto zalogowanego agenta).
-          const { error } = id ? await supabase.from('listings').update(row).eq('id', id) : await supabase.from('listings').insert(row)
-          if (error) throw error
-          location.hash = '#/'
+          if (id) {
+            const { error } = await supabase.from('listings').update(row).eq('id', id)
+            if (error) throw error
+            location.hash = `#/oferty/${id}`
+          } else {
+            const { data, error } = await supabase.from('listings').insert(row).select('id').single()
+            if (error) throw error
+            location.hash = `#/oferty/${data.id}`
+          }
         },
       }),
     ),

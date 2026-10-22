@@ -18,7 +18,7 @@ const WEEKS_TO_OFFER = 8
 const sum = (rows, key) => rows.reduce((total, row) => total + (row[key] ?? 0), 0)
 
 // Szczegóły oferty. Widok sam się odświeża po zapisie, bez przewijania strony na górę.
-export async function listingDetailView(id) {
+export async function listingDetailView(id, ctx) {
   const root = h('div', { class: 'detail' })
   const state = { openPanel: null, statsWeek: null, reportWeek: null }
   let current = null
@@ -68,7 +68,7 @@ export async function listingDetailView(id) {
     const ownerUrl = `${location.origin}/o/${listing.owner_token}`
     return [
       h('a', { class: 'back-link', href: '#/' }, '← Oferty'),
-      headerCard(listing),
+      headerCard(listing, ctx?.isOwner),
       ownerLinkCard(listing, ownerUrl, opens),
       summary(stats, presentations),
       h(
@@ -107,7 +107,7 @@ function quickButton(label, active, onClick) {
 
 // ---------- Nagłówek i podsumowanie ----------
 
-function headerCard(listing) {
+function headerCard(listing, showAgent) {
   const finished = listing.status === 'sold' || listing.status === 'withdrawn'
   const [exclusivityText, exclusivityKind] = exclusivityInfo(listing)
   const facts = [
@@ -125,6 +125,7 @@ function headerCard(listing) {
     facts.length ? h('p', { class: 'mono' }, facts.join(' · ')) : null,
     finished ? null : h('p', { class: `small tone-${exclusivityKind}` }, exclusivityText),
     contract ? h('p', { class: 'small muted' }, contract) : null,
+    showAgent && listing.agent?.full_name ? h('p', { class: 'small muted' }, `Prowadzi: ${listing.agent.full_name}`) : null,
     h(
       'div',
       { class: 'next-step' },

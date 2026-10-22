@@ -1,6 +1,6 @@
 -- Portal Sprzedającego — schemat bazy danych (Supabase / PostgreSQL)
--- Uruchom raz w Supabase: SQL Editor → New query → wklej całość → Run.
--- Skrypt można bezpiecznie uruchomić ponownie (nie kasuje danych).
+-- Uruchom w Supabase: SQL Editor → New query → wklej całość → Run.
+-- Skrypt można bezpiecznie uruchomić ponownie (nie kasuje danych) — tak samo wgrywa się jego nowsze wersje.
 
 ------------------------------------------------------------
 -- TABELE
@@ -38,6 +38,25 @@ create table if not exists public.listings (
     check (length(owner_token) >= 32),
   created_at timestamptz not null default now(),
   check (exclusive_to is null or exclusive_from is null or exclusive_to >= exclusive_from)
+);
+
+-- Kolumny dodane po pierwszej wersji (dla baz utworzonych wcześniej)
+alter table public.profiles add column if not exists email text not null default '';
+alter table public.profiles add column if not exists active boolean not null default true;
+
+-- Zaproszenia agentów do biura (link z tokenem, ważny 14 dni)
+create table if not exists public.office_invites (
+  id uuid primary key default gen_random_uuid(),
+  office_id uuid not null references public.offices(id) on delete cascade,
+  email text not null check (position('@' in email) > 1),
+  full_name text not null default '',
+  token text not null unique
+    default replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
+  created_by uuid default auth.uid() references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '14 days',
+  accepted_at timestamptz,
+  accepted_by uuid references public.profiles(id) on delete set null
 );
 
 -- Prezentacje i działania agenta (oś czasu właściciela)
@@ -89,6 +108,7 @@ create index if not exists events_listing_idx on public.listing_events(listing_i
 create index if not exists events_created_by_idx on public.listing_events(created_by);
 -- unique (listing_id, period_start) już tworzy indeks dla statystyk
 create index if not exists opens_listing_idx on public.portal_opens(listing_id, opened_at desc);
+create index if not exists invites_office_idx on public.office_invites(office_id);
 
 ------------------------------------------------------------
 -- POMOCNICZE
@@ -98,36 +118,68 @@ create or replace function public.my_office_id()
 returns uuid
 language sql stable security definer set search_path = public
 as $$
-  select office_id from public.profiles where id = auth.uid()
+  -- dezaktywowane konto nie należy już do żadnego biura (nic nie widzi)
+  select office_id from public.profiles where id = auth.uid() and active
 $$;
 
 create or replace function public.is_office_owner()
 returns boolean
 language sql stable security definer set search_path = public
 as $$
-  select coalesce((select role = 'owner' from public.profiles where id = auth.uid()), false)
+  select coalesce((select role = 'owner' and active from public.profiles where id = auth.uid()), false)
 $$;
+
+alter table public.office_invites alter column office_id set default public.my_office_id();
+
+-- Uzupełnienie e-maili w profilach założonych przed dodaniem kolumny
+update public.profiles p set email = u.email from auth.users u where u.id = p.id and p.email = '' and u.email is not null;
 
 -- Domyślne wartości: nowa oferta trafia do biura zalogowanego agenta i jest do niego przypisana
 alter table public.listings alter column office_id set default public.my_office_id();
 alter table public.listings alter column agent_id set default auth.uid();
 
--- Nowe konto = nowe biuro + profil właściciela biura
+-- Nowe konto:
+--  * z zaproszeniem (options.data.invite_token) = agent w biurze, które zaprosiło (e-mail musi się zgadzać)
+--  * bez zaproszenia = nowe biuro + profil właściciela biura
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql security definer set search_path = public
 as $$
-declare v_office uuid;
+declare
+  v_office uuid;
+  v_invite public.office_invites;
+  v_token text := nullif(trim(new.raw_user_meta_data->>'invite_token'), '');
 begin
+  if v_token is not null then
+    select * into v_invite from public.office_invites
+    where token = v_token and accepted_at is null and expires_at > now()
+    for update;
+    if not found or lower(v_invite.email) <> lower(new.email) then
+      raise exception 'invalid_invite';
+    end if;
+
+    insert into public.profiles(id, office_id, full_name, phone, email, role)
+    values (
+      new.id, v_invite.office_id,
+      coalesce(nullif(trim(new.raw_user_meta_data->>'full_name'), ''), v_invite.full_name),
+      coalesce(trim(new.raw_user_meta_data->>'phone'), ''),
+      coalesce(new.email, ''),
+      'agent'
+    );
+    update public.office_invites set accepted_at = now(), accepted_by = new.id where id = v_invite.id;
+    return new;
+  end if;
+
   insert into public.offices(name)
   values (coalesce(nullif(trim(new.raw_user_meta_data->>'office_name'), ''), 'Moje biuro'))
   returning id into v_office;
 
-  insert into public.profiles(id, office_id, full_name, phone, role)
+  insert into public.profiles(id, office_id, full_name, phone, email, role)
   values (
     new.id, v_office,
     coalesce(trim(new.raw_user_meta_data->>'full_name'), ''),
     coalesce(trim(new.raw_user_meta_data->>'phone'), ''),
+    coalesce(new.email, ''),
     'owner'
   );
   return new;
@@ -145,7 +197,7 @@ create trigger on_auth_user_created
 -- Rola anon (niezalogowany) nie ma dostępu do żadnej tabeli.
 ------------------------------------------------------------
 
-revoke all on public.offices, public.profiles, public.listings,
+revoke all on public.offices, public.profiles, public.listings, public.office_invites,
   public.listing_events, public.listing_stats, public.portal_opens from anon, authenticated;
 
 grant select on public.offices, public.profiles, public.portal_opens to authenticated;
@@ -154,6 +206,9 @@ grant select, insert, update, delete on public.listings, public.listing_events, 
 grant update (name) on public.offices to authenticated;
 -- profil: agent może zmienić tylko imię i telefon (nie biuro ani rolę)
 grant update (full_name, phone) on public.profiles to authenticated;
+-- zaproszenia: właściciel biura podaje tylko e-mail i imię; resztę (biuro, token, ważność) ustawia baza
+grant select, delete on public.office_invites to authenticated;
+grant insert (email, full_name) on public.office_invites to authenticated;
 
 ------------------------------------------------------------
 -- ZABEZPIECZENIA (Row Level Security)
@@ -168,6 +223,7 @@ alter table public.listings enable row level security;
 alter table public.listing_events enable row level security;
 alter table public.listing_stats enable row level security;
 alter table public.portal_opens enable row level security;
+alter table public.office_invites enable row level security;
 
 drop policy if exists offices_select on public.offices;
 create policy offices_select on public.offices for select to authenticated
@@ -180,18 +236,30 @@ create policy offices_update on public.offices for update to authenticated
 
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles for select to authenticated
-  using (office_id = (select public.my_office_id()));
+  using (office_id = (select public.my_office_id()) or id = (select auth.uid()));
 drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles for update to authenticated
   using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
 drop policy if exists listings_all on public.listings;
+-- Agent widzi i prowadzi tylko swoje oferty; właściciel biura widzi wszystkie oferty biura
+-- i może przypisać ofertę dowolnemu agentowi z biura.
 create policy listings_all on public.listings for all to authenticated
-  using (office_id = (select public.my_office_id()))
+  using (
+    office_id = (select public.my_office_id())
+    and (agent_id = (select auth.uid()) or (select public.is_office_owner()))
+  )
   with check (
     office_id = (select public.my_office_id())
+    and (agent_id = (select auth.uid()) or (select public.is_office_owner()))
     and exists (select 1 from public.profiles p where p.id = agent_id and p.office_id = (select public.my_office_id()))
   );
+
+-- Zaproszenia widzi i wysyła tylko właściciel biura
+drop policy if exists invites_owner on public.office_invites;
+create policy invites_owner on public.office_invites for all to authenticated
+  using (office_id = (select public.my_office_id()) and (select public.is_office_owner()))
+  with check (office_id = (select public.my_office_id()) and (select public.is_office_owner()));
 
 drop policy if exists events_all on public.listing_events;
 create policy events_all on public.listing_events for all to authenticated
@@ -271,3 +339,44 @@ revoke all on function public.is_office_owner() from public, anon, authenticated
 grant execute on function public.is_office_owner() to authenticated;
 
 revoke all on function public.handle_new_user() from public, anon, authenticated;
+
+------------------------------------------------------------
+-- ZESPÓŁ BIURA
+------------------------------------------------------------
+
+-- Dane zaproszenia do ekranu „Dołącz do biura” (bez logowania). Zwraca null, jeśli link jest zły lub wygasł.
+create or replace function public.get_invite(p_token text)
+returns jsonb
+language sql stable security definer set search_path = public
+as $$
+  select jsonb_build_object('office_name', o.name, 'email', i.email, 'full_name', i.full_name)
+  from public.office_invites i
+  join public.offices o on o.id = i.office_id
+  where length(coalesce(p_token, '')) >= 32
+    and i.token = p_token and i.accepted_at is null and i.expires_at > now()
+$$;
+
+-- Właściciel biura dezaktywuje / przywraca konto agenta (konto zostaje, ale agent nic nie widzi).
+create or replace function public.set_member_active(p_profile_id uuid, p_active boolean)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_office_owner() then
+    raise exception 'not_owner';
+  end if;
+  if p_profile_id = auth.uid() then
+    raise exception 'cannot_change_self';
+  end if;
+  update public.profiles set active = p_active
+  where id = p_profile_id and office_id = public.my_office_id();
+  if not found then
+    raise exception 'not_found';
+  end if;
+end
+$$;
+
+revoke all on function public.get_invite(text) from public, anon, authenticated;
+grant execute on function public.get_invite(text) to anon, authenticated;
+revoke all on function public.set_member_active(uuid, boolean) from public, anon, authenticated;
+grant execute on function public.set_member_active(uuid, boolean) to authenticated;

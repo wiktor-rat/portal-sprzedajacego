@@ -36,12 +36,12 @@ Nigdy nie używaj ani nie proś o klucz `secret` / `service_role`.
 Vercel musi przepisywać `/o/*` na stronę portalu (vercel.json rewrites).
 
 ## Bezpieczeństwo (kluczowe)
-- Row Level Security na wszystkich tabelach: agent widzi tylko dane swojego biura.
+- Row Level Security na wszystkich tabelach: dane tylko w obrębie biura. Agent widzi i prowadzi tylko swoje oferty; właściciel biura (role = 'owner') widzi wszystkie oferty biura i może przypisać ofertę innemu agentowi. Konto z `active = false` nic nie widzi.
 - Właściciel nie ma dostępu do tabel. Dane portalu pobiera wyłącznie funkcja `get_owner_portal(p_token, p_track)` (security definer), która zwraca tylko pola przeznaczone dla właściciela i zapisuje otwarcie portalu. Podgląd z panelu agenta wywołuje ją z `p_track = false`.
 - Pole `buyer_label` (notatka wewnętrzna) nigdy nie trafia do portalu.
 - Dane osobowe: biura muszą podpisać umowę powierzenia przed pilotem (poza kodem, ale nie dodawaj zbędnych danych osobowych).
 
-Gotowy schemat bazy z RLS: `supabase/schema.sql` (do przejrzenia i uruchomienia przez Wiktora w Supabase SQL Editor). Nowe konto = nowe biuro + profil właściciela biura (trigger na auth.users, dane z `options.data` przy signUp: full_name, phone, office_name). Zapraszanie kolejnych agentów do biura — później.
+Gotowy schemat bazy z RLS: `supabase/schema.sql` (do przejrzenia i uruchomienia przez Wiktora w Supabase SQL Editor). Nowe konto = nowe biuro + profil właściciela biura (trigger na auth.users, dane z `options.data` przy signUp: full_name, phone, office_name). Agenci dołączają przez zaproszenie: właściciel tworzy wpis w `office_invites`, wysyła link `/?zaproszenie=<token>`, agent zakłada konto z `invite_token` w `options.data` (e-mail musi się zgadzać). Dezaktywacja agenta: funkcja `set_member_active`. Zmiany w bazie = Wiktor uruchamia ponownie cały `schema.sql` (skrypt jest idempotentny).
 
 ## Wygląd
 Prototyp referencyjny (klikalny, dane przykładowe): https://claude.ai/artifact/VPXx3Ru13xefJD4Dn4d8TY
@@ -62,9 +62,10 @@ Kierunek: spokojny, wiarygodny, „raport od profesjonalisty”. Głęboka ziele
 7. Później: wersja dla wynajmu, zapraszanie agentów do biura, branding biura (logo, kolor), automatyczne wyniki kampanii Meta
 
 ## Stan projektu (22.10.2026)
-Kroki 1–6 gotowe i wdrożone na https://portal-sprzedajacego.vercel.app (Supabase: schemat uruchomiony, zmienne w Vercel, Site URL ustawiony, potwierdzanie e-maila wyłączone na czas budowy).
+Kroki 1–6 gotowe, do tego menu boczne (Oferty / Zespół / Ustawienia), zapraszanie agentów, wgląd właściciela biura w oferty agentów. Kroki 1–6 i wdrożone na https://portal-sprzedajacego.vercel.app (Supabase: schemat uruchomiony, zmienne w Vercel, Site URL ustawiony, potwierdzanie e-maila wyłączone na czas budowy).
 
-Struktura kodu (`src/`): `main.js` (logowanie + routing panelu po `#`), `auth.js`, `listings.js` (lista, formularz), `listing-detail.js` (szczegóły: prezentacje, działania, statystyki, link, raport), `report.js` (raport tygodniowy), `portal.js` + `portal.css` (portal właściciela), `domain.js` (słowniki, reguły), `format.js` (liczby i daty po polsku), `ui.js` (helpery DOM i formularzy).
+Struktura kodu (`src/`): `main.js` (logowanie + routing panelu po `#`), `auth.js`, `listings.js` (lista, formularz), `listing-detail.js` (szczegóły: prezentacje, działania, statystyki, link, raport), `report.js` (raport tygodniowy), `portal.js` + `portal.css` (portal właściciela), `domain.js` (słowniki, reguły), `format.js` (liczby i daty po polsku), `ui.js` (helpery DOM i formularzy), `team.js` (zespół, zaproszenia), `settings.js` (moje dane, biuro, hasło).
 
 Przed pilotażem (Wiktor, w panelach): własny SMTP w Supabase + włączenie „Confirm email”, umowy powierzenia z biurami, opcjonalnie własna domena.
-Następny krok w kodzie (do ustalenia): najpewniej zapraszanie agentów do biura, potem branding biura, wynajem, wyniki kampanii Meta.
+Następny krok w kodzie (do ustalenia): branding biura, wynajem, wyniki kampanii Meta, automatyczne powiadomienia dla właścicieli nieruchomości.
+Decyzja: właściciel nieruchomości nie ma konta ani logowania — dostaje link (SMS/e-mail).

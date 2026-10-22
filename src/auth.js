@@ -18,6 +18,7 @@ export function authErrorMessage(error) {
     email_address_invalid: 'Ten adres e-mail jest nieprawidłowy.',
     validation_failed: 'Sprawdź poprawność wpisanych danych.',
   }
+  if (error?.userMessage) return error.userMessage
   if (error?.code && byCode[error.code]) return byCode[error.code]
   if (/fetch|network/i.test(error?.message ?? '')) return 'Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.'
   return 'Coś poszło nie tak. Spróbuj ponownie.'
@@ -115,5 +116,53 @@ export function newPasswordView(onDone) {
         onDone()
       },
     ),
+  )
+}
+
+// Rejestracja agenta z linku zaproszenia (/?zaproszenie=<token>): konto trafia do biura, które zaprosiło.
+export async function joinView(token, goLogin) {
+  const { data: invite, error } = await supabase.rpc('get_invite', { p_token: token })
+  if (error || !invite) {
+    if (error) console.error(error)
+    return h(
+      'section',
+      { class: 'card auth-card' },
+      h('h1', {}, 'Zaproszenie jest nieaktualne'),
+      h('p', { class: 'muted' }, 'Link wygasł albo został już użyty. Poproś właściciela biura o nowe zaproszenie.'),
+      h('div', { class: 'auth-links' }, linkButton('Mam już konto, zaloguj się', goLogin)),
+    )
+  }
+
+  return h(
+    'section',
+    { class: 'card auth-card' },
+    h('p', { class: 'eyebrow' }, 'Zaproszenie'),
+    h('h1', {}, `Dołącz do biura ${invite.office_name}`),
+    h('p', { class: 'muted' }, 'Załóż konto agenta. Zobaczysz w nim swoje oferty, a właściciel biura będzie miał wgląd w ich postępy.'),
+    baseForm({
+      submitLabel: 'Dołącz do biura',
+      errorText: (err) =>
+        // Błąd z bazy przy zakładaniu konta = zaproszenie zużyte lub wygasłe w międzyczasie
+        /database error/i.test(err?.message ?? '') ? 'Zaproszenie wygasło albo zostało już użyte. Poproś o nowe.' : authErrorMessage(err),
+      fields: [
+        field('E-mail', { name: 'email', type: 'email', value: invite.email, readonly: true, hint: 'Na ten adres przyszło zaproszenie.' }),
+        field('Imię i nazwisko', { name: 'full_name', value: invite.full_name, autocomplete: 'name', required: true }),
+        field('Telefon (widoczny dla właścicieli nieruchomości)', { name: 'phone', type: 'tel', autocomplete: 'tel', required: true }),
+        field(`Hasło (min. ${MIN_PASSWORD} znaków)`, { name: 'password', type: 'password', autocomplete: 'new-password', minlength: MIN_PASSWORD, required: true }),
+      ],
+      onSubmit: async ({ full_name, phone, password }, say) => {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: invite.email,
+          password,
+          options: {
+            data: { full_name: full_name.trim(), phone: phone.trim(), invite_token: token },
+            emailRedirectTo: `${location.origin}/`,
+          },
+        })
+        if (signUpError) throw signUpError
+        if (!data.session) say('success', 'Konto utworzone. Sprawdź skrzynkę e-mail i kliknij link potwierdzający, potem zaloguj się.')
+      },
+    }),
+    h('div', { class: 'auth-links' }, linkButton('Mam już konto, zaloguj się', goLogin)),
   )
 }

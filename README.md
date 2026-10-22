@@ -65,6 +65,10 @@ Adres `https://<twoja-domena>/o/test` powinien pokazać „Link jest nieaktywny�
 
 Każda zmiana wypchnięta na gałąź `main` publikuje się na Vercel automatycznie.
 
+### Aktualizacja bazy danych
+
+Gdy zmieni się `supabase/schema.sql`, uruchom go ponownie w całości (**SQL Editor → New query → wklej całość → Run**). Skrypt jest bezpieczny do ponownego uruchomienia: dodaje brakujące elementy, nie kasuje danych.
+
 ## Praca na własnym komputerze (opcjonalnie)
 
 Wymagany Node.js 20.19 lub nowszy.

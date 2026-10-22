@@ -446,3 +446,66 @@ fieldset.choice legend { font-weight: 500; font-size: 0.95rem; padding: 0; margi
   resize: vertical;
 }
 .report-text:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+
+/* ---------- Menu: na telefonie pasek na dole ekranu, na komputerze kolumna po lewej ---------- */
+.sidenav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-around;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.nav-item.active { color: var(--accent); background: var(--accent-soft); }
+.nav-icon { width: 22px; height: 22px; background: currentColor; mask: var(--icon) center / contain no-repeat; -webkit-mask: var(--icon) center / contain no-repeat; }
+.icon-offers { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E"); }
+.icon-team { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='8' r='3.5'/%3E%3Cpath d='M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5'/%3E%3Ccircle cx='17' cy='9' r='2.5'/%3E%3Cpath d='M17 14.5c2.4 0 4 1.5 4.5 4'/%3E%3C/svg%3E"); }
+.icon-settings { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1'/%3E%3C/svg%3E"); }
+
+/* miejsce na dolny pasek, żeby nie zasłaniał treści */
+.shell .page { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+@media (min-width: 900px) {
+  .shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+  .sidenav {
+    position: sticky;
+    top: 0;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+    height: calc(100dvh - 61px);
+    border-top: 0;
+    border-right: 1px solid var(--border);
+    padding: 20px 12px;
+  }
+  .nav-item { flex: none; flex-direction: row; gap: 10px; padding: 10px 12px; font-size: 0.95rem; }
+  .shell .page { padding-bottom: 48px; }
+}
+
+/* Zespół */
+.member-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.member-list li { padding: 12px 0; border-top: 1px solid var(--border); display: grid; gap: 4px; }
+.member-list li:first-child { border-top: 0; padding-top: 4px; }
+.member-list li.inactive { opacity: 0.6; }
+.member-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.member-actions { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.member-actions a.link-btn { text-decoration: underline; }
+
+.field input[readonly] { color: var(--text-muted); background: var(--surface-2); }
